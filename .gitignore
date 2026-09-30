@@ -1,0 +1,23 @@
+.claude/
+/CLAUDE.md
+参考图/
+.verification/
+/.verify-film.js
+/test-results/
+/测试说明.md
+/*-local-command-caveat*.txt
+.agents/
+/skills-lock.json
+/nul
+/AGENTS.md
+
+# WorkBuddy 工作区数据
+.workbuddy/
+
+# 临时验证脚本与 CDP 产物
+.verify-*
+.cdp-*
+
+# 系统文件
+.DS_Store
+Thumbs.db

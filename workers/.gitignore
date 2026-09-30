@@ -1,0 +1,13 @@
+# Wrangler and dependencies
+node_modules/
+.wrangler/
+
+# Environment files
+.env
+.dev.vars
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
