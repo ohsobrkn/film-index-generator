@@ -3580,3 +3580,78 @@ body::-webkit-scrollbar-thumb:hover,
   font-size: 10px;
   white-space: nowrap;
 }
+
+/* ===== 暗盒图片库选择弹窗 ===== */
+.canister-library-container {
+  width: min(720px, 92vw);
+}
+
+.canister-library-container .frame-export-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+#canisterLibrarySearch {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.canister-library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 10px;
+}
+
+.canister-library-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md, 8px);
+  padding: 8px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--ink);
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+}
+
+.canister-library-item:hover,
+.canister-library-item:focus-visible {
+  border-color: var(--accent-line, rgba(224, 164, 88, 0.42));
+  background: var(--surface-2);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.canister-library-item img {
+  width: 100%;
+  aspect-ratio: 300 / 420;
+  object-fit: contain;
+  background: var(--bg-deep, #0f0c09);
+  border-radius: 4px;
+}
+
+.canister-library-item .cl-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-bright, #f8f2e4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canister-library-item .cl-meta {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canister-library-status {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  min-height: 1em;
+}

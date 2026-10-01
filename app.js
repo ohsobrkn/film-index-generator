@@ -132,6 +132,8 @@ const loupeFrameTag = document.getElementById("loupeFrameTag");
   const infoBlockCanisterSideSelect = document.getElementById("infoBlockCanisterSide");
   const infoBlockImageInput = document.getElementById("infoBlockImageInput");
   const infoBlockImageClear = document.getElementById("infoBlockImageClear");
+  const canisterLibraryButton = document.getElementById("canisterLibraryButton");
+  const canisterLibraryModal = document.getElementById("canisterLibraryModal");
   const infoBlockOpacityValue = document.getElementById("infoBlockOpacityValue");
   const infoBlockBlurValue = document.getElementById("infoBlockBlurValue");
   const infoBlockRadiusInput = document.getElementById("infoBlockRadius");
@@ -993,6 +995,170 @@ const loupeFrameTag = document.getElementById("loupeFrameTag");
     canisterRangeReminded = false;
     scheduleRender();
   });
+
+  // 暗盒图片库：从附属仓库 ohsobrkn/canister-library 选择库内图片直接应用。
+  // GitHub Pages 域名不带 CORS 头，JSON 与图片一律经 jsdelivr（首选，稳定 CDN）/
+  // raw.githubusercontent（兜底，较新）跨域取用，两源都返回 ACAO:*。
+  const CANISTER_LIBRARY_BASES = [
+    "https://cdn.jsdelivr.net/gh/ohsobrkn/canister-library@main/",
+    "https://raw.githubusercontent.com/ohsobrkn/canister-library/main/",
+  ];
+  let canisterLibraryBase = null;
+  let canisterLibraryItems = [];
+
+  async function fetchCanisterLibraryData() {
+    for (const base of CANISTER_LIBRARY_BASES) {
+      try {
+        const res = await fetch(base + "data/canisters.json", { cache: "no-store" });
+        if (!res.ok) continue;
+        const json = await res.json();
+        canisterLibraryBase = base;
+        canisterLibraryItems = (json.items || []).filter((it) => !it.status || it.status === "visible");
+        return true;
+      } catch (error) { /* 换下一个源 */ }
+    }
+    return false;
+  }
+
+  // SVG blob 不受 createImageBitmap 支持 → 统一经 <img> 解码转 PNG 位图后再取 ImageBitmap
+  async function loadCanisterBitmapFromUrl(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const blob = await res.blob();
+    if (blob.type !== "image/svg+xml") {
+      try {
+        return await createImageBitmap(blob);
+      } catch (error) { /* 位图解码失败则走 img 通道重试 */ }
+    }
+    const objectUrl = URL.createObjectURL(blob);
+    try {
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = () => reject(new Error("图片解码失败"));
+        img.src = objectUrl;
+      });
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth || 600;
+      canvas.height = img.naturalHeight || 800;
+      canvas.getContext("2d").drawImage(img, 0, 0);
+      const pngBlob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (!pngBlob) throw new Error("位图转换失败");
+      return await createImageBitmap(pngBlob);
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  }
+
+  function renderCanisterLibraryGrid() {
+    const grid = document.getElementById("canisterLibraryGrid");
+    const status = document.getElementById("canisterLibraryStatus");
+    if (!grid) return;
+    const query = (document.getElementById("canisterLibrarySearch").value || "").trim().toLowerCase();
+    grid.innerHTML = "";
+    const items = canisterLibraryItems.filter((it) => {
+      if (!query) return true;
+      const hay = [it.name, it.id, it.notes, ...(it.tags || []), ...Object.values(it.attrs || {})]
+        .filter((v) => v != null)
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(query);
+    });
+    items.forEach((item) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "canister-library-item";
+      btn.setAttribute("role", "option");
+      const img = document.createElement("img");
+      img.loading = "lazy";
+      img.src = canisterLibraryBase + item.thumb;
+      img.alt = (item.name || item.id) + " 缩略图";
+      btn.appendChild(img);
+      const name = document.createElement("span");
+      name.className = "cl-name";
+      name.textContent = item.name || item.id;
+      btn.appendChild(name);
+      const meta = document.createElement("span");
+      meta.className = "cl-meta";
+      const parts = [];
+      if (item.attrs && item.attrs.manufacturer) parts.push(item.attrs.manufacturer);
+      if (item.attrs && item.attrs.filmType) parts.push(item.attrs.filmType);
+      if (item.attrs && item.attrs.iso != null) parts.push("ISO " + item.attrs.iso);
+      meta.textContent = parts.join(" · ");
+      btn.appendChild(meta);
+      btn.addEventListener("click", () => {
+        applyCanisterLibraryItem(item);
+      });
+      grid.appendChild(btn);
+    });
+    if (status) {
+      status.textContent = items.length
+        ? `共 ${items.length} 张${query ? "（已筛选）" : ""}`
+        : "没有匹配的暗盒图片";
+    }
+  }
+
+  async function applyCanisterLibraryItem(item) {
+    const status = document.getElementById("canisterLibraryStatus");
+    if (status) status.textContent = `正在加载「${item.name || item.id}」原图…`;
+    try {
+      const bitmap = await loadCanisterBitmapFromUrl(canisterLibraryBase + item.original);
+      if (infoBlockCanisterImage && typeof infoBlockCanisterImage.close === "function") {
+        infoBlockCanisterImage.close();
+      }
+      infoBlockCanisterImage = bitmap;
+      infoBlockImageClear.hidden = false;
+      // 新图新几何：等宽临界值随之变化，提醒资格重新计算
+      canisterSnapReminded = false;
+      canisterRangeReminded = false;
+      showNotice(`已从图片库应用「${item.name || item.id}」`);
+      closeCanisterLibraryModal();
+      scheduleRender();
+    } catch (error) {
+      console.error("图片库暗盒图加载失败", error);
+      if (status) status.textContent = "暗盒图加载失败，请重试或改用本地上传";
+      showNotice("图片库暗盒图加载失败，请重试或改用本地上传");
+    }
+  }
+
+  function closeCanisterLibraryModal() {
+    if (canisterLibraryModal) canisterLibraryModal.hidden = true;
+  }
+
+  if (canisterLibraryButton) {
+    canisterLibraryButton.addEventListener("click", async () => {
+      if (!canisterLibraryModal) return;
+      canisterLibraryModal.hidden = false;
+      const grid = document.getElementById("canisterLibraryGrid");
+      const status = document.getElementById("canisterLibraryStatus");
+      if (grid) grid.innerHTML = "";
+      if (status) status.textContent = "正在加载图片库…";
+      const ok = await fetchCanisterLibraryData();
+      if (!canisterLibraryModal.hidden) {
+        if (ok) renderCanisterLibraryGrid();
+        else if (status) status.textContent = "图片库加载失败（网络不可达），请稍后重试或改用本地上传";
+      }
+    });
+  }
+  const canisterLibraryClose = document.getElementById("canisterLibraryClose");
+  const canisterLibraryDone = document.getElementById("canisterLibraryDone");
+  const canisterLibrarySearchInput = document.getElementById("canisterLibrarySearch");
+  if (canisterLibraryClose) canisterLibraryClose.addEventListener("click", closeCanisterLibraryModal);
+  if (canisterLibraryDone) canisterLibraryDone.addEventListener("click", closeCanisterLibraryModal);
+  if (canisterLibraryModal) {
+    canisterLibraryModal.addEventListener("click", (event) => {
+      if (event.target && event.target.classList && event.target.classList.contains("frame-export-backdrop")) {
+        closeCanisterLibraryModal();
+      }
+    });
+  }
+  if (canisterLibrarySearchInput) {
+    let searchTimer = null;
+    canisterLibrarySearchInput.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(renderCanisterLibraryGrid, 160);
+    });
+  }
 
   // 滑块 1% 一档刻度（datalist 驱动浏览器渲染刻度线）
   function fillTickDatalist(datalist, from, to, step = 1) {
@@ -6105,6 +6271,9 @@ const loupeFrameTag = document.getElementById("loupeFrameTag");
       if (!frameMenu.hidden) {
         event.preventDefault();
         hideFrameMenu({ restoreFocus: true });
+      } else if (canisterLibraryModal && !canisterLibraryModal.hidden) {
+        event.preventDefault();
+        closeCanisterLibraryModal();
       } else if (!exportModal.hidden) {
         event.preventDefault();
         // 悬浮态下 Esc：先退出悬浮，再按一次才关闭弹窗

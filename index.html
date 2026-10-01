@@ -325,6 +325,7 @@
             邮箱: <a href="mailto:ohso_6rkn@foxmail.com">ohso_6rkn@foxmail.com</a>
           </p>
           <a href="https://github.com/ohsobrkn/film-index-generator" target="_blank" rel="noopener" class="text-button">GitHub 项目主页</a>
+          <a href="https://ohsobrkn.github.io/canister-library/" target="_blank" rel="noopener" class="text-button">暗盒图片库（在线浏览）</a>
         </details>
       </aside>
 
@@ -701,6 +702,7 @@
                 <input id="infoBlockImageInput" type="file" accept="image/png,image/webp,image/gif,image/jpeg" />
                 <small class="field-hint">导入后按「暗盒位置」放置并垂直居中；单击预览画布中的暗盒可弹出菜单调整尺寸（50%–300%）</small>
               </label>
+              <button type="button" class="text-button" id="canisterLibraryButton">从暗盒图片库选择…</button>
               <button type="button" class="text-button" id="infoBlockImageClear" hidden>移除暗盒图片</button>
             </div>
           </div>
@@ -754,6 +756,29 @@
         <div class="frame-export-footer">
           <button type="button" class="text-button" id="infoBlockProportionReset">恢复默认</button>
           <button type="button" class="primary-button" id="infoBlockProportionDone">完成</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 暗盒图片库选择弹窗：经 jsdelivr / raw CDN 跨域取库内 JSON 与图片 -->
+    <div class="frame-export-modal" id="canisterLibraryModal" role="dialog" aria-modal="true" aria-labelledby="canisterLibraryTitle" hidden>
+      <div class="frame-export-backdrop"></div>
+      <div class="frame-export-container canister-library-container" tabindex="-1">
+        <div class="frame-export-header">
+          <div>
+            <h3 id="canisterLibraryTitle">从暗盒图片库选择</h3>
+            <p>点击库内暗盒图，直接应用到信息区块（当前选中侧）</p>
+          </div>
+          <button type="button" class="frame-export-close" id="canisterLibraryClose" aria-label="关闭">×</button>
+        </div>
+        <div class="frame-export-body">
+          <input type="search" id="canisterLibrarySearch" placeholder="搜索型号 / 厂商 / ISO / 标签…" aria-label="搜索暗盒图片库" />
+          <div class="canister-library-grid" id="canisterLibraryGrid" role="listbox" aria-label="暗盒图片列表"></div>
+          <p class="canister-library-status" id="canisterLibraryStatus" aria-live="polite"></p>
+        </div>
+        <div class="frame-export-footer">
+          <a href="https://ohsobrkn.github.io/canister-library/" target="_blank" rel="noopener" class="text-button">浏览完整图片库 →</a>
+          <button type="button" class="primary-button" id="canisterLibraryDone">关闭</button>
         </div>
       </div>
     </div>
