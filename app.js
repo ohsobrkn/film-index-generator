@@ -997,19 +997,23 @@ const loupeFrameTag = document.getElementById("loupeFrameTag");
   });
 
   // 暗盒图片库：从附属仓库 ohsobrkn/canister-library 选择库内图片直接应用。
-  // GitHub Pages 域名不带 CORS 头，JSON 与图片一律经 jsdelivr（首选，稳定 CDN）/
-  // raw.githubusercontent（兜底，较新）跨域取用，两源都返回 ACAO:*。
+  // 暗盒图片库数据源（按实时性排序，每次打开选择器都会强制重新拉取）：
+  // 1. GitHub Pages（实测返回 ACAO:*，与站点数据同源部署 + no-store + 时间戳穿透缓存 → 每次都拿最新）
+  // 2. raw.githubusercontent（实时，带 ACAO:*；部分网络环境可能被阻断）
+  // 3. jsdelivr @main（兜底：稳定 CDN，但分支引用有数小时级缓存，仅在以上两源不可达时使用）
   const CANISTER_LIBRARY_BASES = [
-    "https://cdn.jsdelivr.net/gh/ohsobrkn/canister-library@main/",
+    "https://ohsobrkn.github.io/canister-library/",
     "https://raw.githubusercontent.com/ohsobrkn/canister-library/main/",
+    "https://cdn.jsdelivr.net/gh/ohsobrkn/canister-library@main/",
   ];
   let canisterLibraryBase = null;
   let canisterLibraryItems = [];
 
   async function fetchCanisterLibraryData() {
+    const bust = "?v=" + Date.now();
     for (const base of CANISTER_LIBRARY_BASES) {
       try {
-        const res = await fetch(base + "data/canisters.json", { cache: "no-store" });
+        const res = await fetch(base + "data/canisters.json" + bust, { cache: "no-store" });
         if (!res.ok) continue;
         const json = await res.json();
         canisterLibraryBase = base;
