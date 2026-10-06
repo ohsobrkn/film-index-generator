@@ -1060,13 +1060,15 @@ const loupeFrameTag = document.getElementById("loupeFrameTag");
     if (!grid) return;
     const query = (document.getElementById("canisterLibrarySearch").value || "").trim().toLowerCase();
     grid.innerHTML = "";
+    // 模糊搜索：空格分词，每个关键词都命中才算匹配（如「portra 4」命中 Portra 400）
+    const tokens = query.split(/\s+/).filter(Boolean);
     const items = canisterLibraryItems.filter((it) => {
-      if (!query) return true;
+      if (!tokens.length) return true;
       const hay = [it.name, it.id, it.notes, ...(it.tags || []), ...Object.values(it.attrs || {})]
         .filter((v) => v != null)
         .join(" ")
         .toLowerCase();
-      return hay.includes(query);
+      return tokens.every((t) => hay.includes(t));
     });
     items.forEach((item) => {
       const btn = document.createElement("button");
